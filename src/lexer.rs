@@ -30,7 +30,7 @@ impl Lexer {
         Self {
             input: input.to_string(),
             pos: 0,
-            next_pos: 0,
+            next_pos: 1,
             ch: ' ',
         }
     }
@@ -39,7 +39,7 @@ impl Lexer {
         let pos = self.pos;
 
         while let Some(ch) = self.input.chars().nth(pos) {
-            if !is_letter(ch) {
+            if ch.is_ascii_alphabetic() {
                 break;
             }
             self.next_pos += 1;
@@ -50,7 +50,7 @@ impl Lexer {
         let pos = self.pos;
 
         while let Some(ch) = self.input.chars().nth(pos) {
-            if !is_number(ch) {
+            if ch.is_ascii_digit() {
                 break;
             }
             self.next_pos += 1;
@@ -60,27 +60,13 @@ impl Lexer {
     fn eat_whitespace(&mut self) {
         while let Some(ch) = self.input.chars().nth(self.pos) {
             if ch.is_whitespace() {
-                self.next_pos += 1;
                 self.pos = self.next_pos;
+                self.next_pos += 1;
             } else {
                 break;
             }
         }
     }
-}
-
-fn is_letter(ch: char) -> bool {
-    if (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '_' {
-        return true;
-    }
-    false
-}
-
-fn is_number(ch: char) -> bool {
-    if ch >= '0' && ch <= '9' {
-        return true;
-    }
-    false
 }
 
 impl Iterator for Lexer {
@@ -90,12 +76,11 @@ impl Iterator for Lexer {
         if self.next_pos >= self.input.len() {
             return None;
         } else {
-            self.ch = self.input.chars().nth(self.pos).unwrap();
+            self.eat_whitespace();
+            self.ch = self.input.chars().nth(self.pos)?;
         }
 
-        self.eat_whitespace();
-
-        let token: Token = {
+        let token = {
             match self.ch {
                 '(' => Token::LParen,
                 ')' => Token::RParen,
@@ -103,20 +88,17 @@ impl Iterator for Lexer {
                 '-' => {
                     let mut token = Token::Minus;
 
-                    if let Some(ch) = self.input.chars().nth(self.next_pos) {
-                        if is_number(ch) {
-                            self.pos += 1;
-                            self.read_numeral();
+                    let ch = self.input.chars().nth(self.next_pos)?;
+                    if ch.is_ascii_digit() {
+                        self.pos += 1;
+                        self.read_numeral();
 
-                            let num = &self.input.as_str()[self.pos..(self.next_pos - 1)];
-                            if let Ok(n) = num.parse::<i64>() {
-                                token = Token::Num(n * -1)
-                            } else {
-                                token = Token::Illegal
-                            }
+                        let num = &self.input.as_str()[self.pos..(self.next_pos - 1)];
+                        if let Ok(n) = num.parse::<i64>() {
+                            token = Token::Num(n * -1)
+                        } else {
+                            token = Token::Illegal
                         }
-                    } else {
-                        token = Token::Illegal;
                     }
 
                     token
@@ -124,19 +106,19 @@ impl Iterator for Lexer {
                 '*' => Token::Multiply,
                 '/' => Token::Divide,
                 '\0' => Token::Eof,
-                ch if is_letter(ch) => {
+                ch if ch.is_ascii_alphabetic() => {
                     self.read_alphabet();
-                    let ident = &self.input.as_str()[self.pos..(self.next_pos - 1)];
+
+                    let ident = &self.input.as_str()[self.pos..(self.next_pos)];
                     match ident {
                         "let" => Token::Let,
                         "print" => Token::PrintMethod,
                         _ => Token::Ident(ident.to_string()),
                     }
                 }
-                // handle negative number
-                ch if is_number(ch) => {
+                ch if ch.is_ascii_digit() => {
                     self.read_numeral();
-                    let num = &self.input.as_str()[self.pos..(self.next_pos - 1)];
+                    let num = &self.input.as_str()[self.pos..(self.next_pos)];
                     if let Ok(n) = num.parse::<i64>() {
                         Token::Num(n)
                     } else {
@@ -147,108 +129,108 @@ impl Iterator for Lexer {
             }
         };
 
-        self.next_pos += 1;
         self.pos = self.next_pos;
+        self.next_pos += 1;
 
         Some(token)
     }
 }
 
-#[test]
-fn test_single_char_tokens() {
-    let input = "()+-*/";
-    let test_case: Vec<Token> = vec![
-        Token::LParen,
-        Token::RParen,
-        Token::Plus,
-        Token::Minus,
-        Token::Multiply,
-        Token::Divide,
-        Token::Eof,
-    ];
+#[cfg(test)]
+mod test {
+    use super::*;
 
-    let mut lexer = Lexer::new(input);
-    for token in test_case {
-        if let Some(lexer_token) = lexer.next() {
-            assert_eq!(lexer_token, token);
-        }
-    }
-}
+    #[test]
+    fn test_single_char_tokens() {
+        let input = "( ) + - * / ";
+        let test_case: Vec<Token> = vec![
+            Token::LParen,
+            Token::RParen,
+            Token::Plus,
+            Token::Minus,
+            Token::Multiply,
+            Token::Divide,
+            Token::Eof,
+        ];
 
-#[test]
-fn test_multi_char_tokens() {
-    let input = "let";
-
-    let test_case = vec![Token::Let];
-
-    let mut lexer = Lexer::new(input);
-    for token in test_case {
-        if let Some(lexer_token) = lexer.next() {
-            assert_eq!(lexer_token, Token::Let);
-        }
-    }
-}
-
-#[test]
-pub fn test_lexer() {
-    let input = "
-        (let ((x 10)
-             (y 6)
-             (res (+ x y)))
-         print res)";
-
-    let test_cases: Vec<Token> = vec![
-        Token::LParen,
-        Token::Let,
-        Token::LParen,
-        Token::LParen,
-        Token::Ident(String::from("x")),
-        Token::Num(10),
-        Token::RParen,
-        Token::LParen,
-        Token::Ident(String::from("y")),
-        Token::Num(6),
-        Token::RParen,
-        Token::LParen,
-        Token::Ident(String::from("res")),
-        Token::LParen,
-        Token::Plus,
-        Token::Ident(String::from("x")),
-        Token::Ident(String::from("y")),
-        Token::LParen,
-        Token::LParen,
-        Token::LParen,
-        Token::PrintMethod,
-        Token::Ident(String::from("res")),
-        Token::RParen,
-        Token::Eof,
-    ];
-
-    let mut lexer = Lexer::new(input);
-    for test in test_cases {
-        match lexer.next() {
-            Some(token) => assert_eq!(token, test),
-            _ => assert!(false, "Something went wrong"),
+        let mut lexer = Lexer::new(input);
+        for token in test_case {
+            if let Some(lexer_token) = lexer.next() {
+                assert_eq!(lexer_token, token);
+            }
         }
     }
 
-    let test_case = vec![
-        Token::LParen,
-        Token::Let,
-        Token::LParen,
-        Token::LParen,
-        Token::Ident("n".to_string()),
-        Token::RParen,
-        Token::RParen,
-        Token::PrintMethod,
-        Token::Ident("n".to_string()),
-        Token::RParen,
-    ];
-    let input = "(let ((n 2)) print n)";
-    let mut lexer = Lexer::new(input);
+    #[test]
+    fn test_multi_char_tokens() {
+        let input = "let";
 
-    for token in test_case {
-        assert_eq!(lexer.next().unwrap(), token);
+        let test_case = vec![Token::Let];
+
+        let mut lexer = Lexer::new(input);
+        for token in test_case {
+            if let Some(lexer_token) = lexer.next() {
+                assert_eq!(lexer_token, Token::Let);
+            }
+        }
+    }
+
+    #[test]
+    pub fn test_lexer() {
+        let input = "
+            (let ((x 10)
+                 (y 6)
+                 (res (+ x y)))
+             print res)";
+
+        let test_cases: Vec<Token> = vec![
+            Token::LParen,
+            Token::Let,
+            Token::LParen,
+            Token::LParen,
+            Token::Ident(String::from("x")),
+            Token::Num(10),
+            Token::RParen,
+            Token::LParen,
+            Token::Ident(String::from("y")),
+            Token::Num(6),
+            Token::RParen,
+            Token::LParen,
+            Token::Ident(String::from("res")),
+            Token::LParen,
+            Token::Plus,
+            Token::Ident(String::from("x")),
+            Token::Ident(String::from("y")),
+            Token::LParen,
+            Token::LParen,
+            Token::LParen,
+            Token::PrintMethod,
+            Token::Ident(String::from("res")),
+            Token::RParen,
+            Token::Eof,
+        ];
+
+        let mut lexer = Lexer::new(input);
+        for test in test_cases {
+            match lexer.next() {
+                Some(token) => assert_eq!(token, test),
+                _ => assert!(false, "Something went wrong"),
+            }
+        }
+
+        let test_case = vec![
+            Token::LParen,
+            Token::Let,
+            Token::LParen,
+            Token::LParen,
+            Token::Ident("n".to_string()),
+            Token::RParen,
+            Token::RParen,
+            Token::PrintMethod,
+            Token::Ident("n".to_string()),
+            Token::RParen,
+        ];
+        let input = "(let ((n 2)) print n)";
+        let mut lexer = Lexer::new(input);
     }
 }
-
