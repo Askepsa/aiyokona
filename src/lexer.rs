@@ -39,7 +39,7 @@ impl Lexer {
         let pos = self.pos;
 
         while let Some(ch) = self.input.chars().nth(pos) {
-            if ch.is_ascii_alphabetic() {
+            if !ch.is_ascii_alphabetic() {
                 break;
             }
             self.next_pos += 1;
@@ -50,7 +50,7 @@ impl Lexer {
         let pos = self.pos;
 
         while let Some(ch) = self.input.chars().nth(pos) {
-            if ch.is_ascii_digit() {
+            if !ch.is_ascii_digit() {
                 break;
             }
             self.next_pos += 1;
