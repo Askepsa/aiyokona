@@ -90,7 +90,9 @@ impl Iterator for Lexer {
                         self.read_numeral();
 
                         let num_str = &self.input.as_str()[self.pos..(self.next_pos - 1)];
-                        let num = num_str.parse::<i64>().expect("parsing of num string failed");
+                        let num = num_str
+                            .parse::<i64>()
+                            .expect("parsing of num string failed");
                         token = Token::Num(num * -1);
                     }
 
@@ -99,26 +101,28 @@ impl Iterator for Lexer {
                 '*' => Token::Multiply,
                 '/' => Token::Divide,
                 '\0' => Token::Eof,
-                ch if ch.is_ascii_alphabetic() => {
-                    self.read_alphabet();
+                _ => {
+                    if self.ch.is_ascii_alphabetic() {
+                        self.read_alphabet();
 
-                    let ident = &self.input.as_str()[self.pos..(self.next_pos)];
-                    match ident {
-                        "let" => Token::Let,
-                        "print" => Token::PrintMethod,
-                        _ => Token::Ident(ident.to_string()),
-                    }
-                }
-                ch if ch.is_ascii_digit() => {
-                    self.read_numeral();
-                    let num = &self.input.as_str()[self.pos..(self.next_pos)];
-                    if let Ok(n) = num.parse::<i64>() {
-                        Token::Num(n)
+                        let ident = &self.input.as_str()[self.pos..(self.next_pos)];
+                        match ident {
+                            "let" => Token::Let,
+                            "print" => Token::PrintMethod,
+                            _ => Token::Ident(ident.to_string()),
+                        }
+                    } else if self.ch.is_ascii_digit() {
+                        self.read_numeral();
+
+                        let num_str = &self.input.as_str()[self.pos..(self.next_pos)];
+                        let num = num_str
+                            .parse::<i64>()
+                            .expect("parsing of num string failed");
+                        Token::Num(num)
                     } else {
                         Token::Illegal
                     }
                 }
-                _ => Token::Illegal,
             }
         };
 
