@@ -89,12 +89,9 @@ impl Iterator for Lexer {
                         self.pos += 1;
                         self.read_numeral();
 
-                        let num = &self.input.as_str()[self.pos..(self.next_pos - 1)];
-                        if let Ok(n) = num.parse::<i64>() {
-                            token = Token::Num(n * -1)
-                        } else {
-                            token = Token::Illegal
-                        }
+                        let num_str = &self.input.as_str()[self.pos..(self.next_pos - 1)];
+                        let num = num_str.parse::<i64>().expect("parsing of num string failed");
+                        token = Token::Num(num * -1);
                     }
 
                     token
