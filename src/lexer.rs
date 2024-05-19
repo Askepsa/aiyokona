@@ -212,8 +212,6 @@ mod test {
             Token::Eof,
         ];
 
-        // let input = "(let (x 10)))";
-
         let mut lexer = Lexer::new(input);
         for test in test_cases {
             match lexer.next() {
