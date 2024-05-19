@@ -36,9 +36,7 @@ impl Lexer {
     }
 
     fn read_alphabet(&mut self) {
-        let pos = self.pos;
-
-        while let Some(ch) = self.input.chars().nth(pos) {
+        while let Some(ch) = self.input.chars().nth(self.next_pos) {
             if !ch.is_ascii_alphabetic() {
                 break;
             }
@@ -47,9 +45,7 @@ impl Lexer {
     }
 
     fn read_numeral(&mut self) {
-        let pos = self.pos;
-
-        while let Some(ch) = self.input.chars().nth(pos) {
+        while let Some(ch) = self.input.chars().nth(self.next_pos) {
             if !ch.is_ascii_digit() {
                 break;
             }
@@ -163,14 +159,19 @@ mod test {
 
     #[test]
     fn test_multi_char_tokens() {
-        let input = "let";
+        let input = "let yep print 10";
 
-        let test_case = vec![Token::Let];
+        let test_case = vec![
+            Token::Let,
+            Token::Ident("yep".into()),
+            Token::PrintMethod,
+            Token::Num(10),
+        ];
 
         let mut lexer = Lexer::new(input);
-        for token in test_case {
+        for test_case_token in test_case {
             if let Some(lexer_token) = lexer.next() {
-                assert_eq!(lexer_token, Token::Let);
+                assert_eq!(lexer_token, test_case_token);
             }
         }
     }
@@ -201,20 +202,22 @@ mod test {
             Token::Plus,
             Token::Ident(String::from("x")),
             Token::Ident(String::from("y")),
-            Token::LParen,
-            Token::LParen,
-            Token::LParen,
+            Token::RParen,
+            Token::RParen,
+            Token::RParen,
             Token::PrintMethod,
             Token::Ident(String::from("res")),
             Token::RParen,
             Token::Eof,
         ];
 
+        // let input = "(let (x 10)))";
+
         let mut lexer = Lexer::new(input);
         for test in test_cases {
             match lexer.next() {
                 Some(token) => assert_eq!(token, test),
-                _ => assert!(false, "Something went wrong"),
+                _ => (),
             }
         }
 
