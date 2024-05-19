@@ -98,6 +98,7 @@ fn test_lexer_with_negative_value() {
         Token::PrintMethod,
         Token::Ident("n".to_string()),
         Token::RParen,
+        Token::Eof,
     ];
 
     let input = "(let ((n -2)) print n)";
