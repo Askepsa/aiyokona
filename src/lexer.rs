@@ -88,10 +88,10 @@ impl Iterator for Lexer {
                         self.pos += 1;
                         self.read_numeral();
 
-                        let num_str = &self.input.as_str()[self.pos..(self.next_pos - 1)];
+                        let num_str = &self.input.as_str()[self.pos..(self.next_pos)];
                         let num = num_str
                             .parse::<i64>()
-                            .expect("parsing of num string failed");
+                            .expect("parsing of negative num string failed");
                         token = Token::Num(num * -1);
                     }
 
