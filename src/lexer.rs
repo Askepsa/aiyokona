@@ -1,4 +1,3 @@
-#![allow(unused)]
 use std::iter::Iterator;
 
 #[derive(Debug, PartialEq)]
@@ -219,20 +218,31 @@ mod test {
                 _ => (),
             }
         }
+    }
 
-        let test_case = vec![
+    #[test]
+    fn test_lexer_with_negative_value() {
+        let test_cases = vec![
             Token::LParen,
             Token::Let,
             Token::LParen,
             Token::LParen,
             Token::Ident("n".to_string()),
+            Token::Num(-2),
             Token::RParen,
             Token::RParen,
             Token::PrintMethod,
             Token::Ident("n".to_string()),
             Token::RParen,
         ];
-        let input = "(let ((n 2)) print n)";
+
+        let input = "(let ((n -2)) print n)";
         let mut lexer = Lexer::new(input);
+
+        for test in test_cases {
+            if let Some(token) = lexer.next() {
+                assert_eq!(token, test);
+            }
+        }
     }
 }
